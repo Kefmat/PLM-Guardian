@@ -1,18 +1,19 @@
 <#
 .SYNOPSIS
-    IntegrityCheck - Ressursanalyse for Windows-servere.
+    IntegrityCheck - Ressursanalyse med automatisert opprydding.
 .DESCRIPTION
     Sjekker tilgjengelig diskplass og minnebruk mot definerte terskelverdier.
-    Genererer varsler i loggen dersom ressursbruken overstiger de fastsatte grensene.
+    Utfører automatisk sletting av gamle loggfiler dersom diskplassen er kritisk lav.
 #>
 
 # Konfigurasjon av terskelverdier (Thresholds)
 $DiskThresholdPercent = 10 
 $MemoryThresholdPercent = 90 
-$LogPath = "$PSScriptRoot\..\logs\IntegrityCheck.log"
+$LogDir = "$PSScriptRoot\..\logs"
+$LogPath = "$LogDir\IntegrityCheck.log"
 
 # Opprett logg-mappe hvis den ikke finnes
-if (!(Test-Path "$PSScriptRoot\..\logs")) { New-Item -ItemType Directory -Path "$PSScriptRoot\..\logs" -Force }
+if (!(Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force }
 
 function Write-GuardianLog {
     param(
@@ -24,9 +25,21 @@ function Write-GuardianLog {
     "[$Stamp] [$Level] $Message" | Out-File -FilePath $LogPath -Append
 }
 
+# NY FUNKSJON: Automatisk opprydding for å frigjøre plass
+function Start-GuardianCleanup {
+    Write-GuardianLog "Trigger automatisert opprydding: Sletter logger eldre enn 7 dager." "INFO"
+    $Limit = (Get-Date).AddDays(-7)
+    $OldFiles = Get-ChildItem -Path $LogDir -Filter "*.log" | Where-Object { $_.LastWriteTime -lt $Limit }
+    
+    foreach ($File in $OldFiles) {
+        Remove-Item $File.FullName -Force
+        Write-GuardianLog "Slettet gammel loggfil: $($File.Name)" "INFO"
+    }
+}
+
 Write-GuardianLog "--- Starter ressursanalyse ---"
 
-# Analyse av logiske disker (DriveType 3 = Lokal disk)
+# Analyse av logiske disker
 try {
     $Disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3"
     foreach ($Disk in $Disks) {
@@ -34,7 +47,9 @@ try {
         $FreeGB = [Math]::Round($Disk.FreeSpace / 1GB, 2)
         
         if ($FreePercent -lt $DiskThresholdPercent) {
-            Write-GuardianLog "ADVARSEL: Lav diskplass på $($Disk.DeviceID). Kun $FreeGB GB ($([Math]::Round($FreePercent, 2))%) ledig." "WARNING"
+            Write-GuardianLog "ADVARSEL: Lav diskplass på $($Disk.DeviceID). Kun $FreeGB GB ledig." "WARNING"
+            # Utfører opprydding for å avhjelpe situasjonen
+            Start-GuardianCleanup
         } else {
             Write-GuardianLog "OK: Disk $($Disk.DeviceID) har tilstrekkelig plass ($FreeGB GB ledig)."
         }
@@ -52,9 +67,9 @@ try {
     $UsedMemoryPercent = (($TotalVisibleMemory - $FreePhysicalMemory) / $TotalVisibleMemory) * 100
 
     if ($UsedMemoryPercent -gt $MemoryThresholdPercent) {
-        Write-GuardianLog "ADVARSEL: Høy minnebruk detektert. $($([Math]::Round($UsedMemoryPercent, 2)))% av RAM er i bruk." "WARNING"
+        Write-GuardianLog "ADVARSEL: Høy minnebruk detektert ($([Math]::Round($UsedMemoryPercent, 2))%)." "WARNING"
     } else {
-        Write-GuardianLog "OK: Minnebruk er innenfor normale verdier ($([Math]::Round($UsedMemoryPercent, 2))%)."
+        Write-GuardianLog "OK: Minnebruk er innenfor normale verdier."
     }
 }
 catch {
