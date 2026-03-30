@@ -18,13 +18,14 @@ Utviklingen av denne suiten er basert på profesjonelle prinsipper for systemadm
 
 Prosjektet er bygget modulært for å sikre enkel utvidelse og vedlikehold. Arkitekturen følger en Collector-Evaluator-Actor-modell.
 
-### 1. Modulstruktur
+### Modulstruktur
 
-- **ServiceWatcher.ps1 (The Actor)**: Overvåker prosesstilstander for definerte Windows-tjenester og utfører automatisk gjenoppretting ved stans.
-- **IntegrityCheck.ps1 (The Evaluator)**: Analyserer systemressurser som diskplass og minnebruk (RAM) mot fastsatte terskelverdier (Thresholds).
-- **Logs/ (The Repository)**: Sentral lagring av strukturerte loggfiler for analyse av historiske trender.
+- **ServiceWatcher.ps1** (The Actor): Overvåker prosesstilstander for kritiske Windows-tjenester og utfører automatisk restart ved uventet stans.
+- **IntegrityCheck.ps1** (The Evaluator): Analyserer systemressurser som diskplass og minnebruk (RAM). Inkluderer selvhelbredende logikk som automatisk frigjør diskplass ved sletting av gamle logger dersom kritiske terskelverdier nås.
+- **ReportGenerator.ps1** (The Presenter): Aggregerer rådata fra loggfiler og genererer et visuelt HTML-dashboard med fargekodet status for enkel overvåking av serverparken.
+- **Install-GuardianTasks.ps1**: Automatiserer distribusjon og oppsett av overvåkningssykluser via Windows Task Scheduler.
 
-### 2. Logisk Flyt
+### Logisk Flyt
 
 ```
 [ Trigger: Windows Task Scheduler / Manuelt ]
@@ -44,15 +45,45 @@ Prosjektet er bygget modulært for å sikre enkel utvidelse og vedlikehold. Arki
 [ Output: Oppdaterte loggfiler og systemstatus ]
 ```
 
-### 3. Tekniske Spesifikasjoner
+### Tekniske Høydepunkter
 
-- **Språk**: PowerShell 5.1 / 7+
-- **Grensesnitt**: Windows Management Instrumentation (WMI) / CIM
-- **Logging**: Filbasert tekstlogging med støtte for loggnivåer (INFO, WARNING, CRITICAL)
+- **Parametrisering**: Alle skript støtter parametere for terskelverdier, e-postadresser og dager for loggbevaring. Dette gjør suiten gjenbrukbar på tvers av ulike servermiljøer uten kodeendringer.
+- **Visualisering**: Generering av dynamisk HTML/CSS-rapport som gir driftsledere øyeblikkelig statusoversikt.
+- **WMI/CIM-integrasjon**: Benytter profesjonelle Windows-grensesnitt for presis innhenting av systemdata.
+- **Automatisert Vedlikehold**: Innebygd logikk for sletting av foreldet data for å forhindre ressursmangel.
 
-## Roadmap og Utviklingsfaser
+## Systemkrav og Bruk
 
-- **Fase 1**: Implementering av tjenesteovervåking og selvhelbredende logikk (Fullført).
-- **Fase 2**: Ressursanalyse for disk- og minnekapasitet (Fullført).
-- **Fase 3**: Automatisering av kjøreintervaller via Windows Task Scheduler (Planlagt).
-- **Fase 4**: Utvikling av en aggregator for sentralisert rapportering på tvers av flere servere (Planlagt).
+- **OS**: Windows Server 2016+ / Windows 10/11
+- **Språk**: PowerShell 5.1 eller PowerShell 7+
+- **Rettigheter**: Krever administrative rettigheter for tjenestehåndtering og oppgaveplanlegging
+
+## Installasjon
+
+1. Klone eller last ned prosjektet til en passende mappe på serveren
+2. Åpne PowerShell som administrator
+3. Kjør installasjonsskriptet:
+   ```powershell
+   .\Install-GuardianTasks.ps1
+   ```
+
+## Bruk
+
+### Manuell Kjøring
+Kjør individuelle skript etter behov:
+```powershell
+.\ServiceWatcher.ps1
+.\IntegrityCheck.ps1
+.\ReportGenerator.ps1
+```
+
+### Automatisert Overvåking
+Installasjonsskriptet setter opp automatiske oppgaver i Windows Task Scheduler. Disse kjøres på forhåndsdefinerte intervaller.
+
+## Logging og Rapporter
+
+Alle loggfiler lagres i `logs/`-mappen:
+- **DailyStatus.txt**: Daglig statusrapport
+- **ServiceStatus.log**: Tjenestestatus og handlinger
+- **dashboard.html**: Interaktiv statusrapport generert av ReportGenerator.ps1
+
