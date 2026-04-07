@@ -6,6 +6,8 @@ Tradisjonell IT-drift baserer seg ofte på manuelle kontroller eller brukerrappo
 
 Målet med prosjektet er å sikre maksimal tilgjengelighet for komplekse applikasjonsmiljøer der nedetid har store økonomiske konsekvenser. Ved å implementere kontinuerlig overvåking og automatiserte mottiltak, reduseres responstiden ved kritiske hendelser til et minimum.
 
+<img width="965" height="304" alt="image" src="https://github.com/user-attachments/assets/e870db70-7185-4fe8-bac9-34fd0920ac6c" />
+
 ## Læringsverdi og Metodikk
 
 Utviklingen av denne suiten er basert på profesjonelle prinsipper for systemadministrasjon:
